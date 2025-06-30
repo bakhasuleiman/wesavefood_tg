@@ -51,20 +51,20 @@ export async function initDatabase() {
     const structures = ['users', 'products', 'stores']
     
     for (const structure of structures) {
-      const data = await db.get(structure)
+      const data = await database.get(structure)
       if (!data) {
-        await db.set(structure, {})
+        await database.set(structure, {})
       }
     }
 
     // Инициализируем магазины
     for (const store of mockStores) {
-      await db.set(`stores/${store.id}`, store)
+      await database.set(`stores/${store.id}`, store)
     }
 
     // Инициализируем продукты
     for (const product of mockProducts) {
-      await db.set(`products/${product.id}`, product)
+      await database.set(`products/${product.id}`, product)
     }
 
     console.log('Database initialized successfully')

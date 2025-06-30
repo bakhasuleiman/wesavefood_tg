@@ -34,17 +34,18 @@ export async function GET(request: Request) {
       type: 'user'
     });
 
+    // Создаем ответ с редиректом
+    const response = NextResponse.redirect(new URL('/', request.url));
+
     // Устанавливаем куки
-    const cookieStore = cookies();
-    cookieStore.set('userId', user.id, {
+    response.cookies.set('userId', user.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60 // 30 дней
     });
 
-    // Редиректим на главную
-    return NextResponse.redirect(new URL('/', request.url));
+    return response;
   } catch (error) {
     console.error('Telegram auth error:', error);
     return NextResponse.json(

@@ -12,4 +12,7 @@ import { ProductService } from './services/ProductService'
 
 export const userService = new UserService()
 export const storeService = new StoreService()
-export const productService = new ProductService() 
+export const productService = new ProductService()
+
+// Экспортируем экземпляр базы данных
+export { database } from './database' 

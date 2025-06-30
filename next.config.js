@@ -45,6 +45,15 @@ const nextConfig = {
   // Оптимизация для продакшена
   compress: true,
   poweredByHeader: false,
+
+  webpack: (config) => {
+    config.externals = [...config.externals, 'canvas', 'jsdom'];
+    return config;
+  },
+
+  experimental: {
+    serverComponentsExternalPackages: ['@octokit/rest']
+  }
 }
 
 module.exports = nextConfig 

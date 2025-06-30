@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: wesavefood
+    env: node
+    region: frankfurt
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_OWNER
+        value: bakhasuleiman
+      - key: GITHUB_REPO
+        value: wesavefood_tg
+      - key: GITHUB_BRANCH
+        value: main
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        value: wesavefood_bot
+      - key: DOMAIN
+        value: https://wesavefood.onrender.com
+      - key: NEXT_PUBLIC_API_URL
+        value: https://wesavefood.onrender.com
+    autoDeploy: true 

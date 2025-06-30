@@ -94,4 +94,5 @@ export class GitHubDatabase {
   }
 }
 
+// Создаем и экспортируем единственный экземпляр базы данных
 export const database = new GitHubDatabase(); 
