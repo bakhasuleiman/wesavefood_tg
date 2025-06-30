@@ -1,25 +1,10 @@
 import { NextResponse } from 'next/server'
-import { initializeDatabase, checkDatabaseExists } from '@/src/lib/github'
-import { initDatabase } from '@/src/lib/github/initDatabase'
+import { initDatabase } from '@/src/lib/github'
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
-    // Проверяем, существует ли уже база данных
-    const exists = await checkDatabaseExists()
-    if (exists) {
-      return NextResponse.json(
-        { error: 'Database already initialized' },
-        { status: 400 }
-      )
-    }
-
-    // Инициализируем базу данных
     await initDatabase()
-
-    return NextResponse.json(
-      { message: 'Database initialized successfully' },
-      { status: 200 }
-    )
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error initializing database:', error)
     return NextResponse.json(
