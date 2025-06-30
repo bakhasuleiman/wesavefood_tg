@@ -6,6 +6,7 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
+    nodeVersion: 24.3.0
     envVars:
       - key: NODE_ENV
         value: production

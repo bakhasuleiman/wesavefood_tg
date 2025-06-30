@@ -51,9 +51,7 @@ const nextConfig = {
     return config;
   },
 
-  experimental: {
-    serverComponentsExternalPackages: ['@octokit/rest']
-  }
+  serverExternalPackages: ['@octokit/rest']
 }
 
 module.exports = nextConfig 
