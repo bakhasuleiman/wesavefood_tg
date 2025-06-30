@@ -6,15 +6,8 @@ export interface User {
   avatar?: string
   type: 'user' | 'store'
   storeId?: string
-  phone: string
-  profileType: 'client' | 'store'
-  preferences: {
-    categories: string[]
-    maxDistance: number
-    notifications: boolean
-  }
-  createdAt: Date
-  updatedAt: Date
+  createdAt?: string
+  updatedAt?: string
 }
 
 // Типы для аутентификации

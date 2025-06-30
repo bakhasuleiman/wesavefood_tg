@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { validateTelegramAuth } from '@/lib/telegram/auth';
+import { validateTelegramAuth } from '../../../../../src/lib/telegram/auth';
 import { cookies } from 'next/headers';
-import { UserService } from '@/lib/github/services/UserService';
+import { UserService } from '../../../../../src/lib/github/services/UserService';
 
 export async function GET(request: Request) {
   try {

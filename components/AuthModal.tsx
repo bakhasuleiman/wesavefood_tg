@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/src/contexts/AuthContext'
 import { User } from '@/types'
 import { Dialog } from '@headlessui/react'
-import { createTelegramLoginWidget } from '@/lib/telegram/auth'
+import { createTelegramLoginWidget } from '../src/lib/telegram/auth'
 
 interface AuthModalProps {
   isOpen: boolean

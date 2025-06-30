@@ -15,10 +15,11 @@ for (const envVar of requiredEnvVars) {
 }
 
 // Конфигурация GitHub
-export const GITHUB_CONFIG = {
-  owner: process.env.GITHUB_OWNER!,
-  repo: process.env.GITHUB_REPO!,
-  branch: process.env.GITHUB_BRANCH!,
+export const config = {
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
+  GITHUB_OWNER: process.env.GITHUB_OWNER || 'bakhasuleiman',
+  GITHUB_REPO: process.env.GITHUB_REPO || 'wesavefood_tg',
+  GITHUB_BRANCH: process.env.GITHUB_BRANCH || 'main',
   dataPath: 'data',
 }
 

@@ -1,177 +1,97 @@
-import { octokit, GITHUB_CONFIG, DATA_PATHS, DataFileType, CACHE_TTL } from './config'
-import { Base64 } from 'js-base64'
+import { Octokit } from '@octokit/rest';
+import { config } from './config';
 
-/**
- * Базовые функции для работы с GitHub как базой данных
- */
-export class GitHubDatabase {
-  private static instance: GitHubDatabase
-  private cache: Map<string, { data: any; timestamp: number }> = new Map()
-  private readonly CACHE_TTL = CACHE_TTL
+class GitHubDatabase {
+  private octokit: Octokit;
+  private cache: Map<string, any>;
 
-  private constructor() {}
-
-  static getInstance(): GitHubDatabase {
-    if (!GitHubDatabase.instance) {
-      GitHubDatabase.instance = new GitHubDatabase()
-    }
-    return GitHubDatabase.instance
+  constructor() {
+    this.octokit = new Octokit({
+      auth: config.GITHUB_TOKEN
+    });
+    this.cache = new Map();
   }
 
-  /**
-   * Получение данных из файла
-   */
-  async getData<T>(fileType: DataFileType): Promise<T[]> {
-    const cached = this.cache.get(fileType)
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      return cached.data
-    }
-
+  private async getContent(path: string) {
     try {
-      const response = await octokit.repos.getContent({
-        owner: GITHUB_CONFIG.owner,
-        repo: GITHUB_CONFIG.repo,
-        path: DATA_PATHS[fileType],
-        ref: GITHUB_CONFIG.branch,
-      })
+      const response = await this.octokit.repos.getContent({
+        owner: config.GITHUB_OWNER,
+        repo: config.GITHUB_REPO,
+        path: `data/${path}.json`,
+        ref: config.GITHUB_BRANCH
+      });
 
       if ('content' in response.data) {
-        const content = Base64.decode(response.data.content)
-        const data = JSON.parse(content)
-        
-        this.cache.set(fileType, {
-          data,
-          timestamp: Date.now(),
-        })
-        
-        return data
+        const content = Buffer.from(response.data.content, 'base64').toString();
+        return JSON.parse(content);
       }
-      return []
+      return null;
     } catch (error) {
       if ((error as any).status === 404) {
-        // Если файл не существует, создаем его с пустым массивом
-        await this.saveData(fileType, [])
-        return []
+        return null;
       }
-      console.error(`Error fetching ${fileType}:`, error)
-      return []
+      throw error;
     }
   }
 
-  /**
-   * Сохранение данных в файл
-   */
-  async saveData<T>(fileType: DataFileType, data: T[]): Promise<boolean> {
-    try {
-      const content = JSON.stringify(data, null, 2)
-      const encodedContent = Base64.encode(content)
+  private async updateContent(path: string, content: any) {
+    const currentFile = await this.octokit.repos.getContent({
+      owner: config.GITHUB_OWNER,
+      repo: config.GITHUB_REPO,
+      path: `data/${path}.json`,
+      ref: config.GITHUB_BRANCH
+    }).catch(() => null);
 
-      // Получаем текущий SHA файла
-      let sha: string | undefined
-      try {
-        const currentFile = await octokit.repos.getContent({
-          owner: GITHUB_CONFIG.owner,
-          repo: GITHUB_CONFIG.repo,
-          path: DATA_PATHS[fileType],
-          ref: GITHUB_CONFIG.branch,
-        })
-        if ('sha' in currentFile.data) {
-          sha = currentFile.data.sha
-        }
-      } catch (error) {
-        // Файл не существует
-      }
+    const contentStr = JSON.stringify(content, null, 2);
+    
+    await this.octokit.repos.createOrUpdateFileContents({
+      owner: config.GITHUB_OWNER,
+      repo: config.GITHUB_REPO,
+      path: `data/${path}.json`,
+      message: `Update ${path}`,
+      content: Buffer.from(contentStr).toString('base64'),
+      sha: currentFile && 'sha' in currentFile.data ? currentFile.data.sha : undefined,
+      branch: config.GITHUB_BRANCH
+    });
+  }
 
-      // Сохраняем файл
-      await octokit.repos.createOrUpdateFileContents({
-        owner: GITHUB_CONFIG.owner,
-        repo: GITHUB_CONFIG.repo,
-        path: DATA_PATHS[fileType],
-        message: `Update ${fileType} data`,
-        content: encodedContent,
-        sha,
-        branch: GITHUB_CONFIG.branch,
-      })
-
-      // Обновляем кэш
-      this.cache.set(fileType, {
-        data,
-        timestamp: Date.now(),
-      })
-
-      return true
-    } catch (error) {
-      console.error(`Error saving ${fileType}:`, error)
-      return false
+  async get(path: string): Promise<any> {
+    if (this.cache.has(path)) {
+      return this.cache.get(path);
     }
-  }
-
-  /**
-   * Добавление нового элемента
-   */
-  async addItem<T extends { id: string }>(fileType: DataFileType, item: T): Promise<boolean> {
-    const data = await this.getData<T>(fileType)
-    
-    // Проверяем уникальность ID
-    if (data.some(existingItem => existingItem.id === item.id)) {
-      throw new Error(`Item with id ${item.id} already exists in ${fileType}`)
+    const data = await this.getContent(path);
+    if (data) {
+      this.cache.set(path, data);
     }
-    
-    data.push(item)
-    return this.saveData(fileType, data)
+    return data;
   }
 
-  /**
-   * Обновление существующего элемента
-   */
-  async updateItem<T extends { id: string }>(
-    fileType: DataFileType,
-    id: string,
-    updates: Partial<T>
-  ): Promise<boolean> {
-    const data = await this.getData<T>(fileType)
-    const index = data.findIndex(item => item.id === id)
-    
-    if (index === -1) return false
-    
-    data[index] = { ...data[index], ...updates, updatedAt: new Date() }
-    return this.saveData(fileType, data)
+  async set(path: string, data: any): Promise<void> {
+    await this.updateContent(path, data);
+    this.cache.set(path, data);
   }
 
-  /**
-   * Удаление элемента
-   */
-  async deleteItem<T extends { id: string }>(
-    fileType: DataFileType,
-    id: string
-  ): Promise<boolean> {
-    const data = await this.getData<T>(fileType)
-    const filteredData = data.filter(item => item.id !== id)
-    
-    if (filteredData.length === data.length) return false
-    
-    return this.saveData(fileType, filteredData)
-  }
+  async delete(path: string): Promise<void> {
+    const currentFile = await this.octokit.repos.getContent({
+      owner: config.GITHUB_OWNER,
+      repo: config.GITHUB_REPO,
+      path: `data/${path}.json`,
+      ref: config.GITHUB_BRANCH
+    }).catch(() => null);
 
-  /**
-   * Поиск элементов по условию
-   */
-  async findItems<T>(
-    fileType: DataFileType,
-    predicate: (item: T) => boolean
-  ): Promise<T[]> {
-    const data = await this.getData<T>(fileType)
-    return data.filter(predicate)
-  }
-
-  /**
-   * Очистка кэша
-   */
-  clearCache(fileType?: DataFileType) {
-    if (fileType) {
-      this.cache.delete(fileType)
-    } else {
-      this.cache.clear()
+    if (currentFile && 'sha' in currentFile.data) {
+      await this.octokit.repos.deleteFile({
+        owner: config.GITHUB_OWNER,
+        repo: config.GITHUB_REPO,
+        path: `data/${path}.json`,
+        message: `Delete ${path}`,
+        sha: currentFile.data.sha,
+        branch: config.GITHUB_BRANCH
+      });
     }
+
+    this.cache.delete(path);
   }
-} 
+}
+
+export const database = new GitHubDatabase(); 
