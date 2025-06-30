@@ -1,7 +1,7 @@
 import { Octokit } from '@octokit/rest';
 import { config } from './config';
 
-class GitHubDatabase {
+export class GitHubDatabase {
   private octokit: Octokit;
   private cache: Map<string, any>;
 

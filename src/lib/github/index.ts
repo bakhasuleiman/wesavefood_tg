@@ -1,9 +1,9 @@
 export * from './config'
 export * from './database'
-export * from './services/UserService'
-export * from './services/StoreService'
-export * from './services/ProductService'
 export * from './initDatabase'
+export * from './services/UserService'
+export * from './services/ProductService'
+export * from './services/StoreService'
 
 // Создаем экземпляры сервисов для удобного использования
 import { UserService } from './services/UserService'

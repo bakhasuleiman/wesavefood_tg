@@ -1,8 +1,8 @@
-import { GitHubDatabase } from './database'
-import { mockProducts } from '@/src/data/mockProducts'
+import { database } from './database'
+import { mockProducts, mockStores } from '@/src/data/mockProducts'
 import { User, Store, Product } from '@/types'
 
-const db = GitHubDatabase.getInstance()
+const db = database.getInstance()
 
 // Тестовые пользователи
 const mockUsers: User[] = [
@@ -45,25 +45,32 @@ const mockStores: Store[] = Array.from(
 /**
  * Инициализация базы данных тестовыми данными
  */
-export async function initializeDatabase() {
+export async function initDatabase() {
   try {
-    // Сохраняем пользователей
-    console.log('Инициализация пользователей...')
-    await db.saveData('users', mockUsers)
+    // Создаем базовые структуры данных
+    const structures = ['users', 'products', 'stores']
+    
+    for (const structure of structures) {
+      const data = await db.get(structure)
+      if (!data) {
+        await db.set(structure, {})
+      }
+    }
 
-    // Сохраняем магазины
-    console.log('Инициализация магазинов...')
-    await db.saveData('stores', mockStores)
+    // Инициализируем магазины
+    for (const store of mockStores) {
+      await db.set(`stores/${store.id}`, store)
+    }
 
-    // Сохраняем товары
-    console.log('Инициализация товаров...')
-    await db.saveData('products', mockProducts)
+    // Инициализируем продукты
+    for (const product of mockProducts) {
+      await db.set(`products/${product.id}`, product)
+    }
 
-    console.log('База данных успешно инициализирована!')
-    return true
+    console.log('Database initialized successfully')
   } catch (error) {
-    console.error('Ошибка при инициализации базы данных:', error)
-    return false
+    console.error('Error initializing database:', error)
+    throw error
   }
 }
 

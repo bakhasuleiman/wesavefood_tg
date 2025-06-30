@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { initializeDatabase, checkDatabaseExists } from '@/src/lib/github'
+import { initDatabase } from '@/src/lib/github/initDatabase'
 
 export async function POST(request: Request) {
   try {
@@ -13,13 +14,7 @@ export async function POST(request: Request) {
     }
 
     // Инициализируем базу данных
-    const success = await initializeDatabase()
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Failed to initialize database' },
-        { status: 500 }
-      )
-    }
+    await initDatabase()
 
     return NextResponse.json(
       { message: 'Database initialized successfully' },
@@ -28,7 +23,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error initializing database:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to initialize database' },
       { status: 500 }
     )
   }

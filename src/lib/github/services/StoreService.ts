@@ -1,24 +1,62 @@
-import { Store, StoreProfile } from '@/types'
-import { GitHubDatabase } from '../database'
+import { User } from '@/types'
+import { database } from '../database'
+import { v4 as uuidv4 } from 'uuid'
 
 export class StoreService {
-  private db = GitHubDatabase.getInstance()
+  async createStore(storeData: {
+    name: string;
+    username: string;
+    avatar?: string;
+  }): Promise<User> {
+    const id = uuidv4()
+    const now = new Date().toISOString()
+    
+    const store: User = {
+      id,
+      ...storeData,
+      type: 'store',
+      storeId: id,
+      createdAt: now,
+      updatedAt: now
+    }
 
-  async getAllStores(): Promise<Store[]> {
-    return this.db.getData<Store>('stores')
+    await database.set(`stores/${id}`, store)
+    return store
   }
 
-  async getStoreById(id: string): Promise<Store | null> {
-    const stores = await this.db.getData<Store>('stores')
-    return stores.find(store => store.id === id) || null
+  async updateStore(id: string, updates: Partial<Omit<User, 'id' | 'type' | 'storeId' | 'createdAt' | 'updatedAt'>>): Promise<User | null> {
+    const existingStore = await database.get(`stores/${id}`)
+    if (!existingStore) return null
+
+    const updatedStore: User = {
+      ...existingStore,
+      ...updates,
+      updatedAt: new Date().toISOString()
+    }
+
+    await database.set(`stores/${id}`, updatedStore)
+    return updatedStore
+  }
+
+  async getStoreById(id: string): Promise<User | null> {
+    return await database.get(`stores/${id}`)
+  }
+
+  async deleteStore(id: string): Promise<void> {
+    await database.delete(`stores/${id}`)
+  }
+
+  async getAllStores(): Promise<User[]> {
+    const stores = await database.get('stores') || {}
+    return Object.values(stores).filter((store: User) => store.type === 'store')
   }
 
   async getStoresByDistance(
     lat: number,
     lng: number,
     maxDistance: number
-  ): Promise<Store[]> {
-    const stores = await this.db.getData<Store>('stores')
+  ): Promise<User[]> {
+    const stores = await this.getAllStores()
     return stores.filter(store => {
       const distance = this.calculateDistance(
         lat,
@@ -30,30 +68,18 @@ export class StoreService {
     })
   }
 
-  async createStore(store: Store): Promise<boolean> {
-    return this.db.addItem('stores', store)
-  }
-
-  async updateStore(id: string, updates: Partial<Store>): Promise<boolean> {
-    return this.db.updateItem('stores', id, updates)
-  }
-
-  async deleteStore(id: string): Promise<boolean> {
-    return this.db.deleteItem('stores', id)
-  }
-
   async updateStoreRating(id: string, rating: number): Promise<boolean> {
     const store = await this.getStoreById(id)
     if (!store) return false
 
-    return this.db.updateItem('stores', id, { rating })
+    return this.updateStore(id, { rating })
   }
 
   async updateStoreEcoRating(id: string, ecoRating: number): Promise<boolean> {
     const store = await this.getStoreById(id)
     if (!store) return false
 
-    return this.db.updateItem('stores', id, { ecoRating })
+    return this.updateStore(id, { ecoRating })
   }
 
   private calculateDistance(
